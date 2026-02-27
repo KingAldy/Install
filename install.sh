@@ -363,26 +363,92 @@ EOF
 configure_wings() {
   echo -e "                                                       "
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BLUE}[+]                    CONFIGURE WINGS                 [+]${NC}"
+  echo -e "${BLUE}[+]      INSTALL + CONFIGURE WINGS (PAKET)          [+]${NC}"
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
-  #!/bin/bash
 
-# Minta input token dari pengguna
-read -p "Masukkan token Configure menjalankan wings: " wings
+  # INPUT USER (sekali jalan)
+  read -rp "Masukkan domain panel (contoh: aldy-british.xwarcloud.my.id): " PANEL_DOMAIN
+  read -rp "Masukkan email Let's Encrypt (bebas): " LE_EMAIL
+  echo -e "${YELLOW}Paste token auto-deploy dari panel (1 baris penuh) lalu ENTER:${NC}"
+  read -r TOKEN
 
-eval "$wings"
-# Menjalankan perintah systemctl start wings
-sudo systemctl start wings
+  # DEFAULT sesuai punyamu
+  DB_USER="pterodactyluser"
+  DB_PASS="admin"
+  NODE_FQDN="node.${PANEL_DOMAIN}"
+
+  # VALIDASI INPUT
+  if [[ -z "$PANEL_DOMAIN" || -z "$LE_EMAIL" || -z "$TOKEN" ]]; then
+    echo -e "${RED}Input tidak lengkap. Domain panel, email, dan token wajib diisi.${NC}"
+    sleep 2
+    return
+  fi
+
+  # Validasi token biar bukan asal command
+  if [[ "$TOKEN" != cd\ /etc/pterodactyl* || "$TOKEN" != *"wings configure"* ]]; then
+    echo -e "${RED}Token tidak valid.${NC}"
+    echo -e "${YELLOW}Token harus seperti: cd /etc/pterodactyl && sudo wings configure --panel-url https://... --token ... --node ...${NC}"
+    sleep 3
+    return
+  fi
+
+  echo -e "                                                       "
+  echo -e "${YELLOW}Rangkuman:${NC}"
+  echo -e "Panel Domain : $PANEL_DOMAIN"
+  echo -e "Node FQDN    : $NODE_FQDN"
+  echo -e "Email LE     : $LE_EMAIL"
+  echo -e "DB User      : $DB_USER"
+  echo -e "DB Pass      : $DB_PASS"
+  echo -e "                                                       "
+  echo -e "${YELLOW}NOTE:${NC} Pastikan DNS A record ${NODE_FQDN} mengarah ke IP VPS."
+  echo -e "${YELLOW}Jika pakai Cloudflare, matikan proxy (DNS only) saat issue LE.${NC}"
+  echo -e "                                                       "
+  read -rp "Lanjut install? (y/N): " GO
+  [[ "$GO" =~ ^[Yy]$ ]] || return
+
+  echo -e "                                                       "
+  echo -e "${BLUE}[+] Menjalankan installer Wings (HTTPS + Let's Encrypt = Y)...${NC}"
+  bash <(curl -s https://pterodactyl-installer.se) <<EOF
+1
+y
+n
+y
+y
+$PANEL_DOMAIN
+$DB_USER
+$DB_PASS
+y
+$NODE_FQDN
+y
+y
+$LE_EMAIL
+y
+EOF
+
+  echo -e "                                                       "
+  echo -e "${BLUE}[+] Install Wings selesai. Lanjut configure dari token...${NC}"
+
+  # Jalankan token configure
+  bash -lc "$TOKEN"
+  if [[ $? -ne 0 ]]; then
+    echo -e "${RED}Gagal menjalankan token configure. Generate token ulang di panel lalu coba lagi.${NC}"
+    sleep 3
+    return
+  fi
+
+  echo -e "${BLUE}[+] Enable & start wings service...${NC}"
+  sudo systemctl restart wings
 
   echo -e "                                                       "
   echo -e "${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${GREEN}[+]                 CONFIGURE WINGS SUKSES             [+]${NC}"
+  echo -e "${GREEN}[+]       SELESAI! WINGS SUDAH INSTALL & HIJAU       [+]${NC}"
   echo -e "${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
-  sleep 2
-  clear
-  exit 0
+  echo -e "${YELLOW}Cek status:${NC} systemctl status wings --no-pager"
+  echo -e "${YELLOW}Cek log:${NC} journalctl -u wings -n 50 --no-pager"
+  echo -e "                                                       "
+  read -rp "Tekan ENTER untuk kembali ke menu..." _
 }
 hackback_panel() {
   echo -e "                                                       "
