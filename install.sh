@@ -399,7 +399,7 @@ cd /var/www/pterodactyl || { echo "Direktori tidak ditemukan"; exit 1; }
 # Membuat lokasi baru
 php artisan p:user:make <<EOF
 yes
-hackback@gmail.com
+admin@admind.com
 $user
 $user
 $user
