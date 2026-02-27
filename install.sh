@@ -448,7 +448,8 @@ EOF
   echo -e "${YELLOW}Cek status:${NC} systemctl status wings --no-pager"
   echo -e "${YELLOW}Cek log:${NC} journalctl -u wings -n 50 --no-pager"
   echo -e "                                                       "
-  read -rp "Tekan ENTER untuk kembali ke menu..." _
+
+  exit 0
 }
 hackback_panel() {
   echo -e "                                                       "
