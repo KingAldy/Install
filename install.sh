@@ -13,7 +13,7 @@ display_welcome() {
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BLUE}[+]                                                 [+]${NC}"
   echo -e "${WHITE}[+]                AUTO INSTALLER THEMA             [+]${NC}"
-  echo -e "${WHITE}[+]                  © RevanBotz                [+]${NC}"
+  echo -e "${WHITE}[+]                  © AldyZzXy                    [+]${NC}"
   echo -e "${BLUE}[+]                                                 [+]${NC}"
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e ""
@@ -21,9 +21,9 @@ display_welcome() {
   echo -e "dilarang keras untuk dikasih gratis."
   echo -e ""
   echo -e "𝗧𝗘𝗟𝗘𝗚𝗥𝗔𝗠 :"
-  echo -e "@revanbotz"
+  echo -e "@AldyZzXy"
   echo -e "𝗖𝗥𝗘𝗗𝗜𝗧𝗦 :"
-  echo -e "@revambotz"
+  echo -e "@AldyZzXy"
   sleep 4
   clear
 }
@@ -56,20 +56,20 @@ install_jq() {
 check_token() {
   echo -e "                                                       "
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BLUE}[+]               LICENSY ZERO DEVELOPER           [+]${NC}"
+  echo -e "${BLUE}[+]               LICENSY ALDY DEVELOPER           [+]${NC}"
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   echo -e "${YELLOW}MASUKAN AKSES TOKEN :${NC}"
   read -r USER_TOKEN
 
-  if [ "$USER_TOKEN" = "revan" ]; then
+  if [ "$USER_TOKEN" = "aldy" ]; then
     echo -e "${GREEN}AKSES BERHASIL${NC}}"
   else
-    echo -e "${GREEN}Buy dulu Gih Ke ZeroDev${NC}"
-    echo -e "${YELLOW}TELEGRAM : @ext4you${NC}"
+    echo -e "${GREEN}Buy dulu Gih Ke bang aldy${NC}"
+    echo -e "${YELLOW}TELEGRAM : @AldyZzXy${NC}"
     echo -e "${YELLOW}WHATSAPP : 6287767050506${NC}"
     echo -e "${YELLOW}HARGA TOKEN : 10K FREE UPDATE JIKA ADA TOKEN BARU${NC}"
-    echo -e "${YELLOW}©zerodeveloper${NC}"
+    echo -e "${YELLOW}©AldyZzXy${NC}"
     exit 1
   fi
   clear
@@ -536,11 +536,11 @@ while true; do
   echo -e "${RED}  ,ggggg        gggggggg.                                 ${NC}"
   echo -e "${RED} ,ggg'               'ggg.                                ${NC}"
   echo -e "${RED}',gg       ,ggg.      'ggg:                               ${NC}"
-  echo -e "${RED}'ggg      ,gg'''  .    ggg       Auto Installer ZeroDeveloper Private   ${NC}"
+  echo -e "${RED}'ggg      ,gg'''  .    ggg       Auto Installer Aldy   Private   ${NC}"
   echo -e "${RED}gggg      gg     ,     ggg      ------------------------  ${NC}"
   echo -e "${WHITE}ggg:     gg.     -   ,ggg       • WhatsApp : 6285854642521    ${NC}"
-  echo -e "${WHITE} ggg:     ggg._    _,ggg        • Credit  : RevanBotz ${NC}"
-  echo -e "${WHITE} ggg.    '.'''ggggggp           • Support by Revan Botz  ${NC}"
+  echo -e "${WHITE} ggg:     ggg._    _,ggg        • Credit  : AldyZzXy ${NC}"
+  echo -e "${WHITE} ggg.    '.'''ggggggp           • Support by AldyZzXy  ${NC}"
   echo -e "${WHITE}  'ggg    '-.__                                           ${NC}"
   echo -e "${WHITE}    ggg                                                   ${NC}"
   echo -e "${WHITE}      ggg                                                 ${NC}"
@@ -557,7 +557,7 @@ while true; do
   echo "6. Stellar Theme"
   echo "7. Hack Back Panel"
   echo "8. Ubah Pw Vps"
-  echo "9. Anti Kill (AldyZx)"
+  echo "9. Anti Kill"
   echo "x. Exit"
   echo -e "Masukkan pilihan 1/2/x:"
   read -r MENU_CHOICE
