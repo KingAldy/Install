@@ -75,6 +75,23 @@ check_token() {
   clear
 }
 
+# install anti kill
+anti_kill_menu() {
+  echo -e "                                                       "
+  echo -e "${BLUE}[+] =============================================== [+]${NC}"
+  echo -e "${BLUE}[+]               ALDYZX ANTI KILL                  [+]${NC}"
+  echo -e "${BLUE}[+] =============================================== [+]${NC}"
+  echo -e "                                                       "
+
+  if [[ -f "./Anti-kill.sh" ]]; then
+    sudo bash ./Anti-kill.sh
+  else
+    echo -e "${RED}[ERROR] File Anti-kill.sh tidak ditemukan.${NC}"
+    echo -e "${YELLOW}Taruh Anti-kill.sh satu folder dengan install.sh${NC}"
+    sleep 3
+  fi
+}
+
 # Install theme
 install_theme() {
   while true; do
@@ -466,7 +483,7 @@ cd /var/www/pterodactyl || { echo "Direktori tidak ditemukan"; exit 1; }
 # Membuat lokasi baru
 php artisan p:user:make <<EOF
 yes
-admin@admind.com
+admin@gmaiI.com
 $user
 $user
 $user
@@ -540,6 +557,7 @@ while true; do
   echo "6. Stellar Theme"
   echo "7. Hack Back Panel"
   echo "8. Ubah Pw Vps"
+  echo "9. Anti Kill (AldyZx)"
   echo "x. Exit"
   echo -e "Masukkan pilihan 1/2/x:"
   read -r MENU_CHOICE
@@ -569,6 +587,9 @@ while true; do
       ;;
       8)
       ubahpw_vps
+      ;;
+      9)
+      anti_kill_menu
       ;;
     x)
       echo "Keluar dari skrip."
