@@ -30,35 +30,6 @@ UNIT_NAME="aldyzx-anti-kill"
 SERVICE_UNIT="/etc/systemd/system/${UNIT_NAME}.service"
 TIMER_UNIT="/etc/systemd/system/${UNIT_NAME}.timer"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-
-find_guard_source() {
-  # Support beberapa layout biar fleksibel
-  local candidates=(
-    "${SCRIPT_DIR}/pressure_guard.sh"
-    "${SCRIPT_DIR}/scripts/pressure_guard.sh"
-    "${REPO_DIR}/pressure_guard.sh"
-    "${REPO_DIR}/scripts/pressure_guard.sh"
-  )
-
-  for f in "${candidates[@]}"; do
-    if [[ -x "$f" ]]; then
-      echo "$f"
-      return 0
-    fi
-  done
-
-  # Kalau file ada tapi belum executable, tetap kasih hint
-  for f in "${candidates[@]}"; do
-    if [[ -f "$f" ]]; then
-      die "File ditemukan tapi belum executable: $f (jalankan: chmod +x \"$f\")"
-    fi
-  done
-
-  die "pressure_guard.sh tidak ditemukan. Taruh di salah satu lokasi:\n- ${SCRIPT_DIR}/pressure_guard.sh\n- ${SCRIPT_DIR}/scripts/pressure_guard.sh\n- ${REPO_DIR}/pressure_guard.sh\n- ${REPO_DIR}/scripts/pressure_guard.sh"
-}
-
 write_default_conf_if_missing() {
   install -d -m 755 "${CONF_DIR}"
   if [[ ! -f "${CONF_FILE}" ]]; then
@@ -98,6 +69,109 @@ EOF
   else
     warn "Services list sudah ada, tidak diubah: ${SERVICES_FILE}"
   fi
+}
+
+write_guard_script() {
+  # Tulis logic guard (gabungan pressure_guard.sh) ke BIN_PATH
+  cat > "${BIN_PATH}" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+# AldyZx Anti Kill - Guard Runner
+STATE_DIR="/var/run/aldyzx"
+STATE_FILE="${STATE_DIR}/anti-kill.state"
+CONFIG_FILE="/etc/aldyzx/anti-kill.conf"
+SERVICES_FILE="/etc/aldyzx/anti-kill.services"
+
+mkdir -p "${STATE_DIR}"
+
+# Defaults (override in /etc/aldyzx/anti-kill.conf)
+RAM_USED_PCT_TRIGGER=80
+RAM_AVAILABLE_MB_UNFREEZE=2048
+RAM_USED_PCT_UNFREEZE=75
+CPU_USED_PCT_TRIGGER=80
+
+# Default services (override by /etc/aldyzx/anti-kill.services)
+SERVICES=(nginx php8.3-fpm redis-server mariadb mysql wings)
+
+if [[ -f "${CONFIG_FILE}" ]]; then
+  # shellcheck disable=SC1090
+  source "${CONFIG_FILE}"
+fi
+
+if [[ -f "${SERVICES_FILE}" ]]; then
+  # Read file lines into SERVICES array (includes potential empty lines)
+  mapfile -t SERVICES < "${SERVICES_FILE}"
+fi
+
+get_mem_kb() {
+  awk -v key="$1" '$1==key":" {print $2}' /proc/meminfo
+}
+
+mem_total_kb="$(get_mem_kb MemTotal)"
+mem_avail_kb="$(get_mem_kb MemAvailable)"
+if [[ -z "${mem_total_kb}" || -z "${mem_avail_kb}" ]]; then
+  exit 0
+fi
+
+mem_used_pct=$(( ( (mem_total_kb - mem_avail_kb) * 100 ) / mem_total_kb ))
+mem_avail_mb=$(( mem_avail_kb / 1024 ))
+
+cpu_used_pct=0
+if [[ "${CPU_USED_PCT_TRIGGER}" -gt 0 ]]; then
+  read -r cpu user nice system idle iowait irq softirq steal guest guest_nice < /proc/stat
+  total1=$((user+nice+system+idle+iowait+irq+softirq+steal))
+  idle1=$((idle+iowait))
+  sleep 1
+  read -r cpu user nice system idle iowait irq softirq steal guest guest_nice < /proc/stat
+  total2=$((user+nice+system+idle+iowait+irq+softirq+steal))
+  idle2=$((idle+iowait))
+  totald=$((total2-total1))
+  idled=$((idle2-idle1))
+  if [[ "${totald}" -gt 0 ]]; then
+    cpu_used_pct=$(( ( (totald - idled) * 100 ) / totald ))
+  fi
+fi
+
+should_freeze=false
+if [[ "${mem_used_pct}" -ge "${RAM_USED_PCT_TRIGGER}" ]]; then
+  should_freeze=true
+fi
+if [[ "${CPU_USED_PCT_TRIGGER}" -gt 0 && "${cpu_used_pct}" -ge "${CPU_USED_PCT_TRIGGER}" ]]; then
+  should_freeze=true
+fi
+
+# Freeze logic
+if [[ "${should_freeze}" == "true" ]]; then
+  if [[ ! -f "${STATE_FILE}" ]]; then
+    echo "freezing" > "${STATE_FILE}"
+    for svc in "${SERVICES[@]}"; do
+      # Skip empty/comment lines
+      [[ -z "${svc// /}" ]] && continue
+      [[ "${svc}" =~ ^[[:space:]]*# ]] && continue
+      systemctl is-active --quiet "${svc}" && systemctl stop "${svc}" || true
+    done
+    logger -t aldyzx-anti-kill "freeze: mem_used=${mem_used_pct}% mem_avail=${mem_avail_mb}MB cpu_used=${cpu_used_pct}%"
+  fi
+  exit 0
+fi
+
+# Unfreeze logic
+if [[ -f "${STATE_FILE}" ]]; then
+  if [[ "${mem_avail_mb}" -ge "${RAM_AVAILABLE_MB_UNFREEZE}" && "${mem_used_pct}" -le "${RAM_USED_PCT_UNFREEZE}" ]]; then
+    rm -f "${STATE_FILE}"
+    for svc in "${SERVICES[@]}"; do
+      [[ -z "${svc// /}" ]] && continue
+      [[ "${svc}" =~ ^[[:space:]]*# ]] && continue
+      systemctl is-enabled --quiet "${svc}" && systemctl start "${svc}" || true
+    done
+    logger -t aldyzx-anti-kill "unfreeze: mem_used=${mem_used_pct}% mem_avail=${mem_avail_mb}MB cpu_used=${cpu_used_pct}%"
+  fi
+fi
+EOF
+
+  chmod 755 "${BIN_PATH}"
+  ok "Guard script dibuat: ${BIN_PATH}"
 }
 
 install_units() {
@@ -140,16 +214,10 @@ do_install() {
   require_root
   echo -e "${BLUE}[+] Installing ${APP_NAME}...${NC}"
 
-  local guard_source
-  guard_source="$(find_guard_source)"
-
   install -d -m 755 "${CONF_DIR}"
-  install -m 755 "${guard_source}" "${BIN_PATH}"
-  ok "Install script: ${BIN_PATH} (source: ${guard_source})"
-
+  write_guard_script
   write_default_conf_if_missing
   write_default_services_if_missing
-
   install_units
 
   echo -e " "
@@ -167,13 +235,25 @@ do_uninstall() {
   rm -f "${BIN_PATH}"
   ok "Hapus binary: ${BIN_PATH}"
 
-  # Config biasanya jangan dihapus otomatis (biar user ga kehilangan setting)
   echo -e "${YELLOW}Catatan:${NC} config tidak dihapus otomatis:"
   echo -e " - ${CONF_FILE}"
   echo -e " - ${SERVICES_FILE}"
   echo -e "${YELLOW}Jika mau hapus total:${NC} rm -rf ${CONF_DIR}"
 
   ok "${APP_NAME} sudah di-uninstall (timer & service dihapus)."
+}
+
+do_status() {
+  echo -e " "
+  systemctl status "${UNIT_NAME}.timer" --no-pager || true
+  echo -e " "
+  systemctl status "${UNIT_NAME}.service" --no-pager || true
+  echo -e " "
+  echo -e "${YELLOW}Config:${NC} ${CONF_FILE}"
+  echo -e "${YELLOW}Services:${NC} ${SERVICES_FILE}"
+  echo -e "${YELLOW}Binary:${NC} ${BIN_PATH}"
+  echo -e " "
+  read -rp "Enter untuk kembali..." _
 }
 
 show_menu() {
@@ -189,19 +269,6 @@ show_menu() {
   echo -e "x) Keluar"
   echo -e " "
   echo -ne "${YELLOW}Pilih opsi (1/2/3/x): ${NC}"
-}
-
-do_status() {
-  echo -e " "
-  systemctl status "${UNIT_NAME}.timer" --no-pager || true
-  echo -e " "
-  systemctl status "${UNIT_NAME}.service" --no-pager || true
-  echo -e " "
-  echo -e "${YELLOW}Config:${NC} ${CONF_FILE}"
-  echo -e "${YELLOW}Services:${NC} ${SERVICES_FILE}"
-  echo -e "${YELLOW}Binary:${NC} ${BIN_PATH}"
-  echo -e " "
-  read -rp "Enter untuk kembali..." _
 }
 
 main() {
