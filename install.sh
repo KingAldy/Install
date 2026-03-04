@@ -75,6 +75,11 @@ check_token() {
   clear
 }
 
+if [[ ! -f "Anti-kill.sh" ]]; then
+  curl -fsSL https://raw.githubusercontent.com/KingAldy/Install/main/Anti-kill.sh -o Anti-kill.sh
+  chmod +x Anti-kill.sh
+fi
+
 # install anti kill
 anti_kill_menu() {
   # ambil lokasi folder tempat install.sh berada
