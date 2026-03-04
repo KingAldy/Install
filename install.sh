@@ -77,17 +77,23 @@ check_token() {
 
 # install anti kill
 anti_kill_menu() {
+  # ambil lokasi folder tempat install.sh berada
+  local SCRIPT_DIR
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
   echo -e "                                                       "
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BLUE}[+]               ALDYZX ANTI KILL                  [+]${NC}"
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
 
-  if [[ -f "./Anti-kill.sh" ]]; then
-    sudo bash ./Anti-kill.sh
+  if [[ -f "$SCRIPT_DIR/Anti-kill.sh" ]]; then
+    sudo bash "$SCRIPT_DIR/Anti-kill.sh"
   else
     echo -e "${RED}[ERROR] File Anti-kill.sh tidak ditemukan.${NC}"
-    echo -e "${YELLOW}Taruh Anti-kill.sh satu folder dengan install.sh${NC}"
+    echo -e "${YELLOW}Pastikan Anti-kill.sh ada di repo yang sama dengan install.sh${NC}"
+    echo -e "${YELLOW}SCRIPT_DIR: $SCRIPT_DIR${NC}"
+    echo -e "${YELLOW}Isi folder:$(ls -lah "$SCRIPT_DIR")${NC}"
     sleep 3
   fi
 }
