@@ -75,32 +75,37 @@ check_token() {
   clear
 }
 
-if [[ ! -f "Anti-kill.sh" ]]; then
-  curl -fsSL https://raw.githubusercontent.com/KingAldy/Install/main/Anti-kill.sh -o Anti-kill.sh
-  chmod +x Anti-kill.sh
-fi
+# URL Anti-kill.sh (samakan branch: main/master)
+ANTIKILL_URL="https://raw.githubusercontent.com/KingAldy/Install/main/Anti-kill.sh"
 
-# install anti kill
+ensure_antikill() {
+  # target: simpan di current working directory
+  if [[ ! -f "./Anti-kill.sh" ]]; then
+    echo -e "${YELLOW}[INFO] Anti-kill.sh belum ada, download...${NC}"
+    curl -fsSL "$ANTIKILL_URL" -o "./Anti-kill.sh" || {
+      echo -e "${RED}[ERROR] Gagal download Anti-kill.sh${NC}"
+      return 1
+    }
+    chmod +x "./Anti-kill.sh"
+  fi
+  return 0
+}
+
 anti_kill_menu() {
-  # ambil lokasi folder tempat install.sh berada
-  local SCRIPT_DIR
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
   echo -e "                                                       "
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BLUE}[+]               ALDYZX ANTI KILL                  [+]${NC}"
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
 
-  if [[ -f "$SCRIPT_DIR/Anti-kill.sh" ]]; then
-    sudo bash "$SCRIPT_DIR/Anti-kill.sh"
-  else
-    echo -e "${RED}[ERROR] File Anti-kill.sh tidak ditemukan.${NC}"
-    echo -e "${YELLOW}Pastikan Anti-kill.sh ada di repo yang sama dengan install.sh${NC}"
-    echo -e "${YELLOW}SCRIPT_DIR: $SCRIPT_DIR${NC}"
-    echo -e "${YELLOW}Isi folder:$(ls -lah "$SCRIPT_DIR")${NC}"
-    sleep 3
+  # kalau dijalankan via curl|bash, file ada di pwd, bukan SCRIPT_DIR
+  if ! ensure_antikill; then
+    sleep 2
+    return
   fi
+
+  # jalankan dari pwd (paling konsisten untuk mode pipe)
+  sudo bash "./Anti-kill.sh"
 }
 
 # Install theme
